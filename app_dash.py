@@ -1494,14 +1494,19 @@ def render_sim(state, active_tab, cenario):
     if active_tab != 'tab-3':
         raise dash.exceptions.PreventUpdate
 
+    # Garantir state válido — se None ou inválido, usa default
+    if not state or not isinstance(state, dict):
+        state = {'time': 0.0, 'soc': 50.0, 'playing': False, 'log': [], 'speed': 1}
+
     time_h = state.get('time', 0.0)
     soc = state.get('soc', 50.0)
     geracao = state.get('last_geracao', 0)
     demanda = state.get('last_demanda', 0)
     acao = state.get('last_acao', 0)
     log = state.get('log', [])
-    is_playing = bool(state.get('playing', False))
+    is_playing = state.get('playing', False) is True  # explícito
     speed = state.get('speed', 1)
+    print(f"[render_sim] state.playing = {state.get('playing')!r}, is_playing = {is_playing!r}")
 
     fig = build_sim_scene(time_h, soc, geracao, demanda, acao, cenario)
 
