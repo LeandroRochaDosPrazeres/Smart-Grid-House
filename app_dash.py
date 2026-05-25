@@ -1546,5 +1546,25 @@ def render_sim(state, active_tab, cenario):
     ])
 
 
+# Clientside callback: fechar sidebar automaticamente no mobile na primeira visita
+app.clientside_callback(
+    """
+    function(n_loads) {
+        if (window.innerWidth <= 768 && !window._mobileSidebarHandled) {
+            window._mobileSidebarHandled = true;
+            setTimeout(function() {
+                const btn = document.getElementById('btn_sidebar');
+                if (btn) btn.click();
+            }, 200);
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('sidebar-state', 'data', allow_duplicate=True),
+    Input('sidebar-state', 'data'),
+    prevent_initial_call='initial_duplicate'
+)
+
+
 if __name__ == '__main__':
     app.run(debug=True, dev_tools_ui=False, port=8050)
