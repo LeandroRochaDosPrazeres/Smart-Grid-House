@@ -135,3 +135,107 @@ input[type="number"] { background-color: #1F2937 !important; color: #E2E8F0 !imp
 .modebar-group:first-child { display: flex !important; }
 .modebar-btn { opacity: 0.35; transition: opacity 0.2s; color: #9CA3AF !important; }
 .modebar-btn:hover { opacity: 1 !important; }
+
+
+/* ─────────────────────────────────────────────
+   RESPONSIVIDADE MOBILE (≤768px)
+   ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    /* Sidebar overlay no mobile */
+    .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 280px !important;
+        max-width: 85vw;
+        height: 100vh;
+        z-index: 1000;
+        padding: 60px 16px 16px 16px;
+        overflow-y: auto;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+    /* Quando sidebar está fechada (display: none aplicado pelo Dash), aplicar transform */
+    .sidebar[style*="display: none"] {
+        display: block !important;
+        transform: translateX(-105%);
+    }
+
+    /* Botão hamburguer maior e mais visível */
+    #btn_sidebar {
+        position: fixed !important;
+        top: 12px !important;
+        left: 12px !important;
+        background-color: #161B22 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 8px !important;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem !important;
+    }
+
+    /* Conteúdo principal: full width */
+    #page-content {
+        padding: 60px 12px 16px 12px !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+
+    /* Cards de métricas: 2 colunas no mobile */
+    #metric-cards .col,
+    #metric-cards [class*="col-"] {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding: 0 4px !important;
+    }
+    .metric-card-body {
+        height: 80px;
+        padding: 8px 10px !important;
+    }
+    .metric-value { font-size: 1.2rem !important; }
+    .metric-title { font-size: 0.62rem !important; }
+
+    /* Tabs scroll horizontal no mobile */
+    .nav-tabs {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        margin-bottom: 16px !important;
+    }
+    .nav-tabs .nav-link {
+        padding: 10px 14px !important;
+        font-size: 0.82rem !important;
+        flex-shrink: 0;
+    }
+
+    /* Mini-stats (aba Minha Casa): 1 coluna no mobile */
+    .home-mini-stats {
+        flex-direction: column !important;
+    }
+
+    /* Sidebar título menor */
+    .sidebar-title { font-size: 0.95rem; margin-top: 8px; }
+}
+
+/* Telas muito pequenas (≤480px) */
+@media (max-width: 480px) {
+    #metric-cards .col,
+    #metric-cards [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 6px;
+    }
+    .metric-card-body { height: 72px; }
+
+    /* Modal fullscreen no mobile */
+    .modal-dialog { margin: 10px !important; max-width: calc(100% - 20px) !important; }
+
+    /* Reduzir altura dos gráficos */
+    .js-plotly-plot { max-width: 100% !important; }
+}
