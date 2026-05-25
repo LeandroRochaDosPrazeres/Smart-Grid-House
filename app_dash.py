@@ -1500,7 +1500,7 @@ def render_sim(state, active_tab, cenario):
     demanda = state.get('last_demanda', 0)
     acao = state.get('last_acao', 0)
     log = state.get('log', [])
-    is_playing = state.get('playing', False)
+    is_playing = bool(state.get('playing', False))
     speed = state.get('speed', 1)
 
     fig = build_sim_scene(time_h, soc, geracao, demanda, acao, cenario)
