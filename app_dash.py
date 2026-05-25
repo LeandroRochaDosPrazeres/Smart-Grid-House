@@ -1506,7 +1506,6 @@ def render_sim(state, active_tab, cenario):
     log = state.get('log', [])
     is_playing = state.get('playing', False) is True  # explícito
     speed = state.get('speed', 1)
-    print(f"[render_sim] state.playing = {state.get('playing')!r}, is_playing = {is_playing!r}")
 
     fig = build_sim_scene(time_h, soc, geracao, demanda, acao, cenario)
 
