@@ -1,0 +1,137 @@
+body { background-color: #0B0E14; color: #E2E8F0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+.sidebar { background-color: #12151C; border-right: 1px solid #1F2937; min-height: 100vh; padding: 20px 20px; position: sticky; top: 0; align-self: flex-start; }
+.card { background-color: #161B22; border: 1px solid #1F2937; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; padding: 5px; }
+.nav-tabs { border-bottom: 1px solid #1F2937; margin-bottom: 25px; margin-top: 10px; }
+.nav-tabs .nav-link { color: #9CA3AF; border: none; font-weight: 500; padding: 12px 24px; font-size: 0.95rem; }
+.nav-tabs .nav-link:hover { color: #F3F4F6; }
+.nav-tabs .nav-link.active { color: #10B981; background-color: transparent; border-bottom: 2px solid #10B981; }
+.form-label { color: #9CA3AF; font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; margin-top: 0; }
+.metric-title { font-size: 0.72rem; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metric-value { font-weight: 700; font-size: 1.5rem; color: #F8FAFC; margin-top: 2px; margin-bottom: 0; line-height: 1.2; }
+.Select-control { background-color: #1F2937 !important; border: 1px solid #374151 !important; color: white !important; }
+.Select-value-label { color: white !important; }
+.Select-menu-outer { background-color: #1F2937 !important; border: 1px solid #374151 !important; color: white !important; }
+.Select-option { background-color: #1F2937 !important; color: white !important; }
+.Select-option.is-focused, .Select-option:hover { background-color: #374151 !important; color: white !important; }
+.rc-slider-track { background-color: #10B981 !important; }
+.rc-slider-handle { border: solid 2px #10B981 !important; background-color: #10B981 !important; }
+
+/* Tooltip do slider removido — valor aparece no input box */
+input[type="number"] { background-color: #1F2937 !important; color: #E2E8F0 !important; border: 1px solid #374151 !important; border-radius: 4px !important; font-size: 0.8rem !important; padding: 4px 6px !important; width: 40px !important; }
+/* Esconder tooltip nativo do slider Dash */
+.rc-slider-tooltip { display: none !important; }
+
+/* ── Cards: altura fixa e layout interno fixo ── */
+.metric-card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 90px;
+    padding: 10px 14px 8px 14px !important;
+}
+.metric-top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+.metric-trend-inline {
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.metric-progress-track {
+    height: 2px;
+    background-color: #1F2937;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.metric-progress-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+
+/* ── Sidebar compacta ── */
+.sidebar-title { font-size: 1rem; font-weight: 700; color: #F8FAFC; margin-top: 22px; margin-bottom: 0; }
+.sidebar-subtitle { font-size: 0.72rem; color: #6B7280; margin-bottom: 18px; }
+.sidebar-section { margin-bottom: 14px; }
+.sidebar-label-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+    margin-top: 14px;
+}
+
+/* ── Tooltip padronizado — identidade escura ── */
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 1px solid #374151;
+    color: #6B7280;
+    font-size: 8px;
+    font-weight: 700;
+    cursor: default;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+    font-style: normal;
+}
+.info-icon:hover { border-color: #10B981; color: #10B981; }
+
+/* Sobrescreve o tooltip do dbc para seguir identidade visual */
+.tooltip-inner {
+    background-color: #1A1F2B !important;
+    border: 1px solid #374151 !important;
+    border-radius: 6px !important;
+    color: #9CA3AF !important;
+    font-size: 0.75rem !important;
+    font-family: 'Inter', sans-serif !important;
+    padding: 6px 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+    max-width: 190px !important;
+    text-align: left !important;
+}
+.tooltip.bs-tooltip-end .tooltip-arrow::before,
+.tooltip.bs-tooltip-start .tooltip-arrow::before,
+.tooltip.bs-tooltip-top .tooltip-arrow::before,
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before { border-color: transparent !important; }
+.tooltip-arrow::before { display: none !important; }
+.tooltip.show { opacity: 1 !important; }
+
+/* ── Painel de status da IA ── */
+.ia-status-panel {
+    background-color: #0D1117;
+    border: 1px solid #1F2937;
+    border-left: 2px solid #10B981;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 16px;
+    font-size: 0.78rem;
+    color: #D1D5DB;
+    line-height: 1.5;
+}
+.ia-status-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #10B981;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+/* ── Toolbar Plotly: só botão de download, discreto ── */
+.modebar { background: transparent !important; }
+.modebar-group { display: none !important; }
+/* Mostrar apenas o grupo do botão de câmera (download PNG) */
+.modebar-group:first-child { display: flex !important; }
+.modebar-btn { opacity: 0.35; transition: opacity 0.2s; color: #9CA3AF !important; }
+.modebar-btn:hover { opacity: 1 !important; }
