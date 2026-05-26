@@ -85,20 +85,29 @@ sistema_fuzzy = build_fuzzy_system()
 simulador = ctrl.ControlSystemSimulation(sistema_fuzzy)
 
 # ──────────────────────────────────────────────
-# PRÉ-COMPULAR SUPERFÍCIE 3D PARA PERFORMANCE
+# SUPERFÍCIE 3D — Lazy load (só computa quando precisar)
 # ──────────────────────────────────────────────
 x_grid = np.linspace(0, 100, 20)
 y_grid = np.linspace(0, 100, 20)
-Z_surface = np.zeros((20, 20))
-for i, x_val in enumerate(x_grid):
-    for j, y_val in enumerate(y_grid):
-        simulador.input['geracao_solar'] = x_val
-        simulador.input['demanda_casa'] = y_val
-        try:
-            simulador.compute()
-            Z_surface[j, i] = simulador.output['acao_bateria']
-        except:
-            Z_surface[j, i] = 0
+_Z_surface_cache = None  # cache lazy — calcula na primeira chamada
+
+def get_z_surface():
+    """Calcula a superfície fuzzy 3D apenas na primeira chamada (lazy)."""
+    global _Z_surface_cache
+    if _Z_surface_cache is not None:
+        return _Z_surface_cache
+    z = np.zeros((20, 20))
+    for i, x_val in enumerate(x_grid):
+        for j, y_val in enumerate(y_grid):
+            simulador.input['geracao_solar'] = x_val
+            simulador.input['demanda_casa'] = y_val
+            try:
+                simulador.compute()
+                z[j, i] = simulador.output['acao_bateria']
+            except:
+                z[j, i] = 0
+    _Z_surface_cache = z
+    return z
 
 # ──────────────────────────────────────────────
 # API DE CLIMA (Memória local simples)
@@ -163,7 +172,14 @@ def detectar_cenario_real(weather_data):
         return 'Normal'
 
 
-WEATHER_DATA = fetch_weather_cache()
+# Cache lazy do clima — só busca da API na primeira chamada
+_WEATHER_DATA_CACHE = None
+
+def get_weather():
+    global _WEATHER_DATA_CACHE
+    if _WEATHER_DATA_CACHE is None:
+        _WEATHER_DATA_CACHE = fetch_weather_cache()
+    return _WEATHER_DATA_CACHE
 
 # ──────────────────────────────────────────────
 # APP DASH E ESTILOS
@@ -171,6 +187,65 @@ WEATHER_DATA = fetch_weather_cache()
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY, "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"], suppress_callback_exceptions=True, update_title=None)
 app.title = "Smart Grid House"
 server = app.server  # exposto para Vercel/Gunicorn
+
+# Tela de loading customizada (substitui o "Loading..." cru)
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            body { background-color: #0B0E14; margin: 0; }
+            #_dash-loading {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                background-color: #0B0E14; color: #E2E8F0; z-index: 9999;
+                font-family: 'Inter', sans-serif;
+            }
+            #_dash-loading::before {
+                content: "⚡"; font-size: 4rem; margin-bottom: 16px;
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+            #_dash-loading::after {
+                content: "Smart Grid House";
+                font-size: 1.4rem; font-weight: 700; color: #F8FAFC;
+                margin-bottom: 8px;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 0.5; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.1); }
+            }
+            ._dash-loading {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                background-color: #0B0E14 !important; color: transparent !important;
+                font-size: 0 !important; z-index: 9999;
+            }
+            ._dash-loading::before {
+                content: "⚡"; font-size: 4rem; margin-bottom: 16px;
+                animation: pulse 1.5s ease-in-out infinite;
+                color: #10B981;
+            }
+            ._dash-loading::after {
+                content: "Smart Grid House · carregando";
+                font-size: 1rem; font-weight: 600; color: #9CA3AF;
+                font-family: 'Inter', sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
 
 # CORES EXATAS DO PLOTLY
 COR_SOL  = '#F59E0B'
@@ -334,12 +409,12 @@ def toggle_sidebar(n, is_open):
     [Input('cenario_drop', 'value')]
 )
 def update_clima_real(cenario_input):
-    cur = WEATHER_DATA.get('current', {})
+    cur = get_weather().get('current', {})
     code = cur.get('weather_code', 1)
     is_day = cur.get('is_day', 1)
     temp = cur.get('temperature_2m', 25.0)
     emoji, desc = weather_code_to_info(code, is_day)
-    cenario_auto = detectar_cenario_real(WEATHER_DATA)
+    cenario_auto = detectar_cenario_real(get_weather())
     is_auto = (cenario_input == 'Auto')
 
     return html.Div([
@@ -380,7 +455,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
     horas = list(range(24))
 
     # Se "Auto", detecta o cenário a partir do clima real da API
-    cenario_auto = detectar_cenario_real(WEATHER_DATA)
+    cenario_auto = detectar_cenario_real(get_weather())
     if cenario == 'Auto':
         cenario = cenario_auto
     sol_base = np.array([0, 0, 0, 0, 0, 5, 25, 50, 75, 90, 100, 95, 85, 70, 50, 30, 10, 2, 0, 0, 0, 0, 0, 0])
@@ -549,7 +624,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
     fig2.update_yaxes(range=[0, 105])
 
     # FIG 3: 3D
-    fig3 = go.Figure(data=[go.Surface(z=Z_surface, x=x_grid, y=y_grid, colorscale='Viridis', opacity=0.7)])
+    fig3 = go.Figure(data=[go.Surface(z=get_z_surface(), x=x_grid, y=y_grid, colorscale='Viridis', opacity=0.7)])
     # Sincronia: Adicionar a jornada de 24h na superfície Fuzzy!
     fig3.add_trace(go.Scatter3d(
         x=sol_dia, y=casa_dia, z=respostas_ia,
@@ -571,8 +646,9 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
 
     # FIG 4: WEATHER
     fig4 = go.Figure()
-    if WEATHER_DATA:
-        df_clima = pd.DataFrame(WEATHER_DATA['daily'])
+    weather = get_weather()
+    if weather:
+        df_clima = pd.DataFrame(weather['daily'])
         df_clima['time'] = pd.to_datetime(df_clima['time'])
         
         # Sincronia 1: Ajuste da Meta Econômica e Cenário Climático Menu Lateral
@@ -839,10 +915,10 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
                       'border': '1px solid #1F2937', 'flex': '1', 'minWidth': '0'})
 
         # ── Banner de clima real (API Open-Meteo) ──
-        cur = WEATHER_DATA.get('current', {})
+        cur = get_weather().get('current', {})
         clima_emoji, clima_desc = weather_code_to_info(cur.get('weather_code', 1), cur.get('is_day', 1))
         clima_temp = cur.get('temperature_2m', 25.0)
-        cenario_detect = detectar_cenario_real(WEATHER_DATA)
+        cenario_detect = detectar_cenario_real(get_weather())
         cen_label = {'Normal': 'Dia normal', 'Chuvoso': 'Dia chuvoso', 'Verao': 'Verão extremo', 'Vazia': 'Casa vazia'}.get(cenario, 'Dia normal')
 
         layout_charts = html.Div([
