@@ -220,10 +220,21 @@ input[type="number"] { background-color: #1F2937 !important; color: #E2E8F0 !imp
         flex-shrink: 0;
     }
 
-    /* Mini-stats (aba Minha Casa): 1 coluna no mobile */
-    .home-mini-stats {
+    /* Mini-stats e mini-charts (aba Minha Casa): 1 coluna no mobile */
+    .home-mini-stats,
+    .home-mini-charts {
         flex-direction: column !important;
+        gap: 8px !important;
     }
+    .home-mini-stats > div,
+    .home-mini-charts > div {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* Reduzir margins de gráficos no mobile */
+    .js-plotly-plot .plotly { font-size: 10px !important; }
+    .js-plotly-plot .gtitle { font-size: 12px !important; }
 
     /* Sidebar título menor */
     .sidebar-title { font-size: 0.95rem; margin-top: 8px; }

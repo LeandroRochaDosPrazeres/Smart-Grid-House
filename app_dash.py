@@ -301,7 +301,7 @@ app.layout = dbc.Container([
 
             # Simulação ao vivo — stores e interval
             dcc.Store(id='sim-state', data={'time': 0.0, 'soc': 50.0, 'playing': False, 'log': [], 'speed': 1}),
-            dcc.Interval(id='sim-interval', interval=500, disabled=True),
+            dcc.Interval(id='sim-interval', interval=1000, disabled=True),
             
         ], id="page-content", width=12, md=9, lg=9, style={'padding': '60px 30px 15px 30px'})
     ], className="m-0")
@@ -525,10 +525,11 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color='#9CA3AF', family="Inter, sans-serif", size=12),
-        margin=dict(t=30, l=10, r=20, b=40),
+        margin=dict(t=60, l=10, r=20, b=70),
+        title=dict(font=dict(size=14, color='#E2E8F0'), x=0.02, y=0.98, xanchor='left', yanchor='top'),
         xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False),
         yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5),
         hoverlabel=HOVER_STYLE,
     )
 
@@ -853,14 +854,14 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
                 mini_stat("Bateria agora", f"{soc_agora:.0f}%", status_cor, f"dura {autonomia_txt}"),
                 mini_stat("Autonomia solar", f"{autonomia_pct:.0f}%", '#F59E0B', f"{horas_sol}h de sol forte"),
                 mini_stat("Energia gerada", f"{kwh_gerado:.1f} kWh", '#0EA5E9', f"de {kwh_consumido:.1f} consumidos"),
-            ], style={'display': 'flex', 'gap': '10px', 'marginBottom': '14px'}),
+            ], className="home-mini-stats", style={'display': 'flex', 'gap': '10px', 'marginBottom': '14px', 'flexWrap': 'wrap'}),
 
             # ─── Linha 2: Mini-charts 24h ───
             html.Div([
                 mini_chart_card("☀️ Geração nas 24h", f"pico {max(sol_dia):.0f}%", fig_mini_sol, '#F59E0B'),
                 mini_chart_card("🔋 Bateria nas 24h", f"agora {soc_agora:.0f}%", fig_mini_bat, '#8B5CF6'),
                 mini_chart_card("⚡ Consumo nas 24h", f"pico {max(casa_dia):.0f}%", fig_mini_casa, '#0EA5E9'),
-            ], style={'display': 'flex', 'gap': '10px', 'marginBottom': '14px'}),
+            ], className="home-mini-charts", style={'display': 'flex', 'gap': '10px', 'marginBottom': '14px', 'flexWrap': 'wrap'}),
 
             # ─── Linha 3: Cena visual + dica + IA ───
             dbc.Row([
@@ -1427,7 +1428,7 @@ def sim_tick(n, state, cenario, meta_eco, modo_bat):
     soc = state['soc']
     speed = state.get('speed', 1)
     hora_int = int(time_h) % 24
-    step_h = (5 * speed) / 60.0
+    step_h = (10 * speed) / 60.0  # 1s = 10min simulados (×velocidade)
 
     sol_base = np.array([0,0,0,0,0,5,25,50,75,90,100,95,85,70,50,30,10,2,0,0,0,0,0,0], dtype=float)
     casa_base = np.array([10,10,10,10,15,40,80,50,30,20,20,30,40,30,40,60,90,100,85,60,40,20,10,10], dtype=float)
