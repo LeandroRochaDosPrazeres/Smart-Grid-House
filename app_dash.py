@@ -370,7 +370,9 @@ app.layout = dbc.Container([
                     dbc.Tab(tab_id="tab-3", label="🌍 Simulação ao Vivo"),
                 ], id="tabs", active_tab="tab-home"),
                 
-                html.Div(id='charts-wrapper', className="mt-4")
+                html.Div(id='charts-wrapper', className="mt-4"),
+                # Container da simulação SEMPRE presente — não é re-renderizado pelo callback master
+                html.Div(id='sim-live-container', style={'display': 'none'}),
                 
             ], className="px-3"),
 
@@ -1077,8 +1079,9 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
             dbc.Col(html.Div(dcc.Graph(figure=fig4, config=GRAPH_CONFIG, style={'height': '450px'}), className="card border-0 bg-transparent shadow-none"), width=12, lg=12, className="mb-5 pb-3"),
         ])
     else:
-        # Tab 3: Simulação ao Vivo — renderizada por callback separado
-        layout_charts = html.Div(id='sim-live-container')
+        # Tab 3: Simulação ao Vivo — container vive fora do callback master
+        # Aqui retornamos um div vazio (o sim-live-container está sempre presente, gerenciado por render_sim)
+        layout_charts = html.Div()
 
     return cards, layout_charts, ia_panel
 
@@ -1561,16 +1564,18 @@ def sim_tick(n, state, cenario, meta_eco, modo_bat):
 
 
 @app.callback(
-    Output('sim-live-container', 'children'),
+    [Output('sim-live-container', 'children'),
+     Output('sim-live-container', 'style')],
     [Input('sim-state', 'data'),
      Input('tabs', 'active_tab')],
     [State('cenario_drop', 'value')]
 )
 def render_sim(state, active_tab, cenario):
+    # Esconder container quando não está na tab 3
     if active_tab != 'tab-3':
-        raise dash.exceptions.PreventUpdate
+        return dash.no_update, {'display': 'none'}
 
-    # Garantir state válido — se None ou inválido, usa default
+    # Garantir state válido
     if not state or not isinstance(state, dict):
         state = {'time': 0.0, 'soc': 50.0, 'playing': False, 'log': [], 'speed': 1}
 
@@ -1580,7 +1585,7 @@ def render_sim(state, active_tab, cenario):
     demanda = state.get('last_demanda', 0)
     acao = state.get('last_acao', 0)
     log = state.get('log', [])
-    is_playing = state.get('playing', False) is True  # explícito
+    is_playing = state.get('playing', False) is True
     speed = state.get('speed', 1)
 
     fig = build_sim_scene(time_h, soc, geracao, demanda, acao, cenario)
@@ -1623,7 +1628,7 @@ def render_sim(state, active_tab, cenario):
         dcc.Graph(figure=fig, config={'displayModeBar': False, 'staticPlot': False},
                   style={'height': '520px', 'borderRadius': '12px', 'overflow': 'hidden'}),
         log_panel,
-    ])
+    ]), {'display': 'block'}
 
 
 # Clientside callback: fechar sidebar automaticamente no mobile na primeira visita
