@@ -632,99 +632,117 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
     fig2.update_layout(**minimal_layout, hovermode='x unified', title="Evolução do SoC (State of Charge)")
     fig2.update_yaxes(range=[0, 105])
 
-    # FIG 3: Timeline de decisões da IA (hora a hora)
-    estados, cores_barra, textos = [], [], []
-    for h in range(24):
-        a = respostas_ia[h]
-        if a > 10:
-            estados.append("Carregando")
-            cores_barra.append("#10B981")
-            textos.append(f"+{a:.0f}%")
-        elif a < -10:
-            estados.append("Usando bateria")
-            cores_barra.append("#8B5CF6")
-            textos.append(f"{a:.0f}%")
-        else:
-            estados.append("Parado")
-            cores_barra.append("#374151")
-            textos.append("—")
-
-    valores_barra = [max(5, min(100, abs(respostas_ia[h]))) for h in range(24)]
-
+    # TIMELINE DA IA (HTML) — substitui o gráfico 3D, replica o mockup
     autonomia_pct_fig3 = min(100, round(
         (solar_direto + energia_bateria_usada) / max(consumo_total_kwh, 0.01) * 100
     ))
 
-    opacidades = [1.0 if h <= hora_atual else 0.35 for h in range(24)]
-    cores_com_alpha = []
+    def _soc_cor(v):
+        if v < 20:
+            return '#EF4444'
+        if v < 50:
+            return '#F59E0B'
+        return '#10B981'
+
+    linhas_timeline = []
     for h in range(24):
-        op = opacidades[h]
-        base = cores_barra[h].lstrip('#')
-        r, g, b = int(base[0:2], 16), int(base[2:4], 16), int(base[4:6], 16)
-        cores_com_alpha.append(f"rgba({r},{g},{b},{op})")
+        a = respostas_ia[h]
+        soc_h = soc_historico[h]
+        if a > 10:
+            cor_barra = '#10B981'
+            acao_txt = f"carregando +{a:.0f}%"
+        elif a < -10:
+            cor_barra = '#8B5CF6'
+            acao_txt = f"usando bateria {a:.0f}%"
+        else:
+            cor_barra = '#4B5563'
+            acao_txt = "parado"
+        largura = max(8, min(100, abs(a)))
+        futura = h > hora_atual
+        op = 1.0 if not futura else 0.30
+        is_agora = (h == hora_atual)
 
-    labels_hora = [f"{h:02d}h {'←' if h == hora_atual else ''}" for h in range(24)]
+        hora_style = {
+            'width': '46px', 'flexShrink': 0, 'textAlign': 'right',
+            'fontSize': '0.72rem', 'paddingRight': '10px',
+            'color': '#10B981' if is_agora else '#6B7280',
+            'fontWeight': '700' if is_agora else '400',
+        }
+        hora_label = f"{h:02d}h"
+        if is_agora:
+            hora_label = f"{h:02d}h ←"
 
-    fig3 = go.Figure()
-    fig3.add_trace(go.Bar(
-        x=valores_barra, y=labels_hora, orientation='h',
-        marker_color=cores_com_alpha, marker_line_width=0,
-        text=[textos[h] if h <= hora_atual else "" for h in range(24)],
-        textposition='inside',
-        textfont=dict(color='white', size=11, family='Inter, sans-serif'),
-        hovertemplate=[
-            f"<b>{h:02d}h</b><br>Estado: {estados[h]}<br>"
-            f"Sol: {sol_dia[h]:.0f}%  |  Casa: {casa_dia[h]:.0f}%<br>"
-            f"Bateria: {soc_historico[h]:.0f}%<extra></extra>"
-            for h in range(24)
-        ],
-        name='Decisão da IA', showlegend=False, xaxis='x',
-    ))
-    fig3.add_trace(go.Scatter(
-        x=soc_historico[:24], y=labels_hora, mode='lines+markers',
-        line=dict(color='#F59E0B', width=2.5, dash='dot'),
-        marker=dict(size=5, color='#F59E0B'),
-        name='Bateria (%)',
-        hovertemplate='Bateria: %{x:.0f}%<extra></extra>', xaxis='x2',
-    ))
-    fig3.add_hline(y=hora_atual, line_width=1.5, line_dash="dash", line_color="#10B981",
-                   annotation_text="agora", annotation_position="right",
-                   annotation_font_color="#10B981", annotation_font_size=11)
-    fig3.add_vrect(x0=20, x1=80, fillcolor="rgba(16,185,129,0.04)", line_width=0, xref='x2',
-                   annotation_text="faixa ideal bateria", annotation_position="top left",
-                   annotation_font_color="#10B981", annotation_font_size=9)
-    fig3.add_annotation(
-        x=0.5, y=1.10, xref='paper', yref='paper',
-        text=f"<b style='font-size:18px'>{autonomia_pct_fig3}% autossuficiente hoje</b>   "
-             f"<span style='color:#10B981'>R$ {economia_dia:.2f} economizados</span> · "
-             f"<span style='color:#9CA3AF'>R$ {economia_mes:.0f}/mês</span>",
-        showarrow=False, font=dict(color='#E2E8F0', family='Inter, sans-serif', size=13), align='center',
-    )
-    for i, (cor, txt) in enumerate([
-        ("#10B981", "Carregando bateria"),
-        ("#8B5CF6", "Usando bateria"),
-        ("#374151", "Parado"),
-    ]):
-        fig3.add_annotation(
-            x=0.01 + i * 0.33, y=1.04, xref='paper', yref='paper',
-            text=f"<span style='color:{cor}'>■</span> {txt}",
-            showarrow=False, font=dict(color='#9CA3AF', family='Inter, sans-serif', size=11), align='left',
-        )
-    fig3.update_layout(
-        title=dict(text="O que a IA fez hoje — hora a hora",
-                   font=dict(color='#E2E8F0', family='Inter, sans-serif', size=14), x=0),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color='#9CA3AF', family='Inter, sans-serif', size=11),
-        margin=dict(l=10, r=80, t=90, b=20), hoverlabel=HOVER_STYLE,
-        xaxis=dict(title=dict(text="Intensidade da ação (%)"), range=[0, 105], showgrid=True,
-                   gridcolor='rgba(255,255,255,0.05)', zeroline=False, side='bottom',
-                   tickfont=dict(size=10)),
-        xaxis2=dict(title=dict(text="Nível da bateria (%)", font=dict(color='#F59E0B')),
-                    range=[0, 105], overlaying='x', side='top',
-                    showgrid=False, zeroline=False, tickfont=dict(size=10, color='#F59E0B')),
-        yaxis=dict(showgrid=False, zeroline=False, autorange='reversed', tickfont=dict(size=10)),
-        barmode='overlay',
-    )
+        linhas_timeline.append(html.Div([
+            html.Div(hora_label, style=hora_style),
+            html.Div([
+                html.Div(style={
+                    'position': 'absolute', 'left': 0, 'top': 0, 'height': '100%',
+                    'width': f'{largura}%', 'backgroundColor': cor_barra,
+                    'opacity': op, 'borderRadius': '5px', 'transition': 'width 0.3s',
+                }),
+                html.Span(acao_txt if not futura else "", style={
+                    'position': 'absolute', 'right': '10px', 'top': '50%',
+                    'transform': 'translateY(-50%)', 'fontSize': '0.74rem',
+                    'color': '#E2E8F0', 'zIndex': 2, 'whiteSpace': 'nowrap',
+                    'opacity': op,
+                }),
+            ], style={
+                'position': 'relative', 'flex': 1, 'height': '26px',
+                'backgroundColor': '#0D1117', 'borderRadius': '5px', 'overflow': 'hidden',
+            }),
+            html.Div(f"{soc_h:.0f}%", style={
+                'width': '48px', 'flexShrink': 0, 'textAlign': 'right',
+                'fontSize': '0.8rem', 'fontWeight': '700', 'paddingLeft': '10px',
+                'color': _soc_cor(soc_h), 'opacity': op,
+            }),
+        ], style={'display': 'flex', 'alignItems': 'center', 'padding': '3px 0'}))
+
+    timeline_ia = html.Div([
+        # Hero card
+        html.Div([
+            html.Div(f"{autonomia_pct_fig3}%", style={
+                'fontSize': '3rem', 'fontWeight': '800', 'color': '#10B981',
+                'lineHeight': '1', 'marginRight': '20px', 'flexShrink': 0,
+            }),
+            html.Div([
+                html.P("autossuficiente hoje", style={
+                    'color': '#F8FAFC', 'fontWeight': '700', 'fontSize': '1.05rem', 'margin': '0',
+                }),
+                html.P("A IA cobriu a maior parte do consumo com solar + bateria", style={
+                    'color': '#9CA3AF', 'fontSize': '0.85rem', 'margin': '4px 0 0 0',
+                }),
+                html.P([
+                    "Você economizou ",
+                    html.Span(f"R$ {economia_dia:.2f} hoje", style={'color': '#10B981', 'fontWeight': '600'}),
+                    html.Span(f" · R$ {economia_mes:.0f}/mês", style={'color': '#6B7280'}),
+                ], style={'color': '#9CA3AF', 'fontSize': '0.8rem', 'margin': '6px 0 0 0'}),
+            ]),
+        ], style={
+            'display': 'flex', 'alignItems': 'center', 'padding': '18px 22px',
+            'backgroundColor': '#0D1117', 'borderRadius': '12px',
+            'border': '1px solid #1F2937', 'marginBottom': '18px',
+        }),
+
+        # Título + legenda
+        html.P("O QUE A IA FEZ HORA A HORA", style={
+            'color': '#9CA3AF', 'fontSize': '0.72rem', 'fontWeight': '700',
+            'letterSpacing': '0.08em', 'marginBottom': '8px',
+        }),
+        html.Div([
+            html.Span([html.Span("■ ", style={'color': '#10B981'}), "Carregando bateria"],
+                      style={'color': '#9CA3AF', 'fontSize': '0.78rem', 'marginRight': '18px'}),
+            html.Span([html.Span("■ ", style={'color': '#8B5CF6'}), "Usando bateria"],
+                      style={'color': '#9CA3AF', 'fontSize': '0.78rem', 'marginRight': '18px'}),
+            html.Span([html.Span("■ ", style={'color': '#4B5563'}), "Parado"],
+                      style={'color': '#9CA3AF', 'fontSize': '0.78rem'}),
+        ], style={'marginBottom': '12px'}),
+
+        # Linhas da timeline
+        html.Div(linhas_timeline),
+    ], style={
+        'backgroundColor': '#161B22', 'borderRadius': '12px',
+        'border': '1px solid #1F2937', 'padding': '20px',
+    })
 
     # FIG 4: WEATHER
     fig4 = go.Figure()
@@ -1155,7 +1173,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
             dbc.Col(btn_csv, width=12),
             dbc.Col(html.Div(dcc.Graph(figure=fig6, config=GRAPH_CONFIG, style={'height': '360px'}), className="card border-0 bg-transparent shadow-none"), width=12, lg=12, className="mb-2"),
             dbc.Col(metrics_panel, width=12),
-            dbc.Col(html.Div(dcc.Graph(figure=fig3, config=GRAPH_CONFIG, style={'height': '450px'}), className="card border-0 bg-transparent shadow-none"), width=12, lg=12, className="mb-5 pb-3"),
+            dbc.Col(timeline_ia, width=12, lg=12, className="mb-5 pb-3"),
             dbc.Col(html.Div(dcc.Graph(figure=fig4, config=GRAPH_CONFIG, style={'height': '450px'}), className="card border-0 bg-transparent shadow-none"), width=12, lg=12, className="mb-5 pb-3"),
         ])
     else:
