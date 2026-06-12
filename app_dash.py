@@ -7,7 +7,14 @@ from skfuzzy import control as ctrl
 import plotly.graph_objects as go
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# Fuso de São Paulo / Brasília (UTC-3, sem horário de verão)
+TZ_SP = timezone(timedelta(hours=-3))
+
+def now_sp():
+    """Retorna o datetime atual no fuso de São Paulo/Brasília."""
+    return datetime.now(TZ_SP)
 
 # ──────────────────────────────────────────────
 # HELPERS DE UI
@@ -512,7 +519,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
     soc_plot = soc_historico[:24]
 
     # hora atual para linha "Agora"
-    hora_atual = datetime.now().hour
+    hora_atual = now_sp().hour
 
     # CARDS — altura fixa, % inline, cor dinâmica na bateria
     def soc_color(val):
@@ -625,25 +632,98 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
     fig2.update_layout(**minimal_layout, hovermode='x unified', title="Evolução do SoC (State of Charge)")
     fig2.update_yaxes(range=[0, 105])
 
-    # FIG 3: 3D
-    fig3 = go.Figure(data=[go.Surface(z=get_z_surface(), x=x_grid, y=y_grid, colorscale='Viridis', opacity=0.7)])
-    # Sincronia: Adicionar a jornada de 24h na superfície Fuzzy!
-    fig3.add_trace(go.Scatter3d(
-        x=sol_dia, y=casa_dia, z=respostas_ia,
-        mode='lines+markers', line=dict(color='#EF4444', width=6), marker=dict(size=4, color='#EF4444'),
-        name='Ações de Hoje (Curva)'
+    # FIG 3: Timeline de decisões da IA (hora a hora)
+    estados, cores_barra, textos = [], [], []
+    for h in range(24):
+        a = respostas_ia[h]
+        if a > 10:
+            estados.append("Carregando")
+            cores_barra.append("#10B981")
+            textos.append(f"+{a:.0f}%")
+        elif a < -10:
+            estados.append("Usando bateria")
+            cores_barra.append("#8B5CF6")
+            textos.append(f"{a:.0f}%")
+        else:
+            estados.append("Parado")
+            cores_barra.append("#374151")
+            textos.append("—")
+
+    valores_barra = [max(5, min(100, abs(respostas_ia[h]))) for h in range(24)]
+
+    autonomia_pct_fig3 = min(100, round(
+        (solar_direto + energia_bateria_usada) / max(consumo_total_kwh, 0.01) * 100
     ))
+
+    opacidades = [1.0 if h <= hora_atual else 0.35 for h in range(24)]
+    cores_com_alpha = []
+    for h in range(24):
+        op = opacidades[h]
+        base = cores_barra[h].lstrip('#')
+        r, g, b = int(base[0:2], 16), int(base[2:4], 16), int(base[4:6], 16)
+        cores_com_alpha.append(f"rgba({r},{g},{b},{op})")
+
+    labels_hora = [f"{h:02d}h {'←' if h == hora_atual else ''}" for h in range(24)]
+
+    fig3 = go.Figure()
+    fig3.add_trace(go.Bar(
+        x=valores_barra, y=labels_hora, orientation='h',
+        marker_color=cores_com_alpha, marker_line_width=0,
+        text=[textos[h] if h <= hora_atual else "" for h in range(24)],
+        textposition='inside',
+        textfont=dict(color='white', size=11, family='Inter, sans-serif'),
+        hovertemplate=[
+            f"<b>{h:02d}h</b><br>Estado: {estados[h]}<br>"
+            f"Sol: {sol_dia[h]:.0f}%  |  Casa: {casa_dia[h]:.0f}%<br>"
+            f"Bateria: {soc_historico[h]:.0f}%<extra></extra>"
+            for h in range(24)
+        ],
+        name='Decisão da IA', showlegend=False, xaxis='x',
+    ))
+    fig3.add_trace(go.Scatter(
+        x=soc_historico[:24], y=labels_hora, mode='lines+markers',
+        line=dict(color='#F59E0B', width=2.5, dash='dot'),
+        marker=dict(size=5, color='#F59E0B'),
+        name='Bateria (%)',
+        hovertemplate='Bateria: %{x:.0f}%<extra></extra>', xaxis='x2',
+    ))
+    fig3.add_hline(y=hora_atual, line_width=1.5, line_dash="dash", line_color="#10B981",
+                   annotation_text="agora", annotation_position="right",
+                   annotation_font_color="#10B981", annotation_font_size=11)
+    fig3.add_vrect(x0=20, x1=80, fillcolor="rgba(16,185,129,0.04)", line_width=0, xref='x2',
+                   annotation_text="faixa ideal bateria", annotation_position="top left",
+                   annotation_font_color="#10B981", annotation_font_size=9)
+    fig3.add_annotation(
+        x=0.5, y=1.10, xref='paper', yref='paper',
+        text=f"<b style='font-size:18px'>{autonomia_pct_fig3}% autossuficiente hoje</b>   "
+             f"<span style='color:#10B981'>R$ {economia_dia:.2f} economizados</span> · "
+             f"<span style='color:#9CA3AF'>R$ {economia_mes:.0f}/mês</span>",
+        showarrow=False, font=dict(color='#E2E8F0', family='Inter, sans-serif', size=13), align='center',
+    )
+    for i, (cor, txt) in enumerate([
+        ("#10B981", "Carregando bateria"),
+        ("#8B5CF6", "Usando bateria"),
+        ("#374151", "Parado"),
+    ]):
+        fig3.add_annotation(
+            x=0.01 + i * 0.33, y=1.04, xref='paper', yref='paper',
+            text=f"<span style='color:{cor}'>■</span> {txt}",
+            showarrow=False, font=dict(color='#9CA3AF', family='Inter, sans-serif', size=11), align='left',
+        )
     fig3.update_layout(
-        scene=dict(
-            xaxis_title='Geração Solar', yaxis_title='Demanda Casa', zaxis_title='Atuação Bateria',
-            xaxis=dict(gridcolor='rgba(255,255,255,0.08)', backgroundcolor='rgba(0,0,0,0)', title_font=dict(color='#E2E8F0')),
-            yaxis=dict(gridcolor='rgba(255,255,255,0.08)', backgroundcolor='rgba(0,0,0,0)', title_font=dict(color='#E2E8F0')),
-            zaxis=dict(gridcolor='rgba(255,255,255,0.08)', backgroundcolor='rgba(0,0,0,0)', title_font=dict(color='#E2E8F0'))
-        ),
+        title=dict(text="O que a IA fez hoje — hora a hora",
+                   font=dict(color='#E2E8F0', family='Inter, sans-serif', size=14), x=0),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color='#9CA3AF', family="Inter, sans-serif"),
-        margin=dict(l=0, r=0, t=30, b=0), title="Mapa de Decisão da IA",
-        hoverlabel=HOVER_STYLE,
+        font=dict(color='#9CA3AF', family='Inter, sans-serif', size=11),
+        margin=dict(l=10, r=80, t=90, b=20), hoverlabel=HOVER_STYLE,
+        xaxis=dict(title=dict(text="Intensidade da ação (%)"), range=[0, 105], showgrid=True,
+                   gridcolor='rgba(255,255,255,0.05)', zeroline=False, side='bottom',
+                   tickfont=dict(size=10)),
+        xaxis2=dict(title=dict(text="Nível da bateria (%)", font=dict(color='#F59E0B')),
+                    range=[0, 105], overlaying='x', side='top',
+                    showgrid=False, zeroline=False, tickfont=dict(size=10, color='#F59E0B')),
+        yaxis=dict(showgrid=False, zeroline=False, autorange='reversed', tickfont=dict(size=10)),
+        barmode='overlay',
     )
 
     # FIG 4: WEATHER
@@ -665,7 +745,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
         
         fig4.add_trace(go.Bar(x=df_clima['time'], y=df_clima['Consumo Estimado'], name='Consumo Diário Projetado', marker_color='#3B82F6', marker_line_width=0))
         fig4.add_trace(go.Bar(x=df_clima['time'], y=df_clima['Geração Estimada'], name='Geração Diária Projetada', marker_color='#F59E0B', marker_line_width=0))
-        fig4.add_vline(x=datetime.now().timestamp() * 1000, line_width=2, line_dash="dash", line_color="#10B981", annotation_text="Hoje", annotation_position="top right")
+        fig4.add_vline(x=now_sp().timestamp() * 1000, line_width=2, line_dash="dash", line_color="#10B981", annotation_text="Hoje", annotation_position="top right")
 
     fig4.update_layout(**minimal_layout, barmode='group', hovermode='x unified', title="Previsão de 7 Dias")
     fig4.update_xaxes(showgrid=False)
@@ -887,7 +967,7 @@ def update_dashboard(meta_eco, cenario, modo_bat, active_tab, soc_inicial_input,
         )
 
         # Cena visual (menor)
-        time_now = float(hora_atual) + (datetime.now().minute / 60.0)
+        time_now = float(hora_atual) + (now_sp().minute / 60.0)
         fig_casa = build_sim_scene(time_now, soc_agora,
                                     sol_dia[hora_atual] if hora_atual < 24 else 0,
                                     casa_dia[hora_atual] if hora_atual < 24 else 0,
