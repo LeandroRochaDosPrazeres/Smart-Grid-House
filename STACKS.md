@@ -14,7 +14,7 @@ Linguagem principal do projeto. Escolhida por ter o ecossistema mais completo pa
 
 ## NumPy 2.4
 **O que faz:** Cálculos numéricos com arrays.  
-**Onde usamos:** Universos de discurso (0–100 com passo 1), perfis de geração/demanda de 24h, clip de limites, interpolação de valores entre horas, pré-cômputo da superfície 3D (grade 20×20).  
+**Onde usamos:** Universos de discurso (0–100 com passo 1), perfis de geração/demanda de 24h, clip de limites, interpolação de valores entre horas, cálculo da superfície de controle fuzzy (grade 20×20).  
 **Por que:** Performance — opera sobre arrays inteiros sem loops Python.
 
 ---
@@ -35,8 +35,8 @@ Linguagem principal do projeto. Escolhida por ter o ecossistema mais completo pa
 
 ## Plotly 6.7
 **O que faz:** Gráficos interativos (hover, zoom, download PNG).  
-**Onde usamos:** Todos os 6 gráficos (linhas 24h, donut, SoC, superfície 3D, barras clima, comparativo) + a cena visual da simulação ao vivo (shapes posicionadas com trigonometria).  
-**Por que:** Integração nativa com Dash + suporte a 3D + interatividade sem código extra.
+**Onde usamos:** Gráficos (linhas 24h, donut, SoC, barras de clima, comparativo IA vs On/Off) + a cena visual da simulação ao vivo (shapes posicionadas com trigonometria).  
+**Por que:** Integração nativa com Dash + interatividade sem código extra.
 
 ---
 

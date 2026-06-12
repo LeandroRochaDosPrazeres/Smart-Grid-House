@@ -133,8 +133,13 @@ Gráfico de linhas mostrando duas curvas de SoC lado a lado:
 
 A diferença visual demonstra a superioridade do controle fuzzy: transições suaves vs. degraus bruscos, melhor aproveitamento da faixa ideal, menos ciclos de carga/descarga.
 
-#### Mapa de Decisão da IA (3D)
-Superfície tridimensional interativa mostrando **todas as decisões possíveis** do controlador fuzzy. Sobre a superfície, uma curva vermelha traça a jornada real do dia simulado. Rotação livre.
+#### Linha do Tempo da IA — hora a hora
+Painel visual mostrando o que a IA decidiu em cada hora do dia (00h–23h):
+- **Card de destaque** com o percentual de autossuficiência do dia e a economia (R$/dia · R$/mês)
+- **Barras horizontais** coloridas por estado: verde (carregando bateria), roxo (usando bateria), cinza (parado). A largura indica a intensidade da ação.
+- **Texto da ação** em cada hora (ex: "carregando +15%", "usando bateria -19%")
+- **Nível da bateria** na ponta direita, colorido por faixa (verde/amarelo/vermelho)
+- Horas futuras aparecem com opacidade reduzida; a hora atual é destacada com seta `←`
 
 #### Previsão de 7 Dias
 Gráfico de barras com dados reais da API Open-Meteo (São Paulo):
@@ -244,7 +249,9 @@ O servidor inicia na porta 8050. Para parar, pressione `Ctrl+C` no terminal.
 
 O sistema roda em **malha fechada**: a ação da IA em cada hora afeta o SoC, que é acumulado ao longo das 24 horas. O fator de conversão `0.15` (modo Auto) representa a eficiência do ciclo de carga/descarga de uma bateria LiFePO4 de ~10kWh com inversor de 3kW.
 
-A superfície 3D é **pré-computada na inicialização** (grade 20×20 = 400 pontos) para garantir resposta imediata nos callbacks.
+A superfície de controle fuzzy é calculada sob demanda (lazy load, grade 20×20) apenas quando necessária, mantendo o startup rápido.
+
+O horário exibido (relógio da simulação, marcador "agora") usa o fuso de **São Paulo/Brasília (UTC-3)**, independente do servidor.
 
 ---
 
@@ -366,7 +373,7 @@ Smart-Grid-House/
 |-------|-----------------|
 | Helpers de UI | `GRAPH_CONFIG`, `info_icon()`, `label_with_info()` |
 | Lógica Fuzzy | `build_fuzzy_system()` — variáveis, pertinência, 9 regras |
-| Pré-cômputo 3D | Grade 20×20 da superfície de controle (inicialização) |
+| Pré-cômputo Fuzzy | `get_z_surface()` — superfície de controle (lazy load) |
 | API de Clima | `fetch_weather_cache()` — dados reais com fallback mock |
 | Layout | Estrutura HTML — sidebar + cards + tabs + gráficos + stores |
 | Callback Master | `update_dashboard()` — simulação 24h, cards, gráficos, economia |
@@ -385,7 +392,7 @@ Smart-Grid-House/
 |------------|--------|-------|
 | Dash | 2.18 | Framework web reativo — layout + callbacks |
 | Dash Bootstrap Components | 1.6 | Grid, cards, tabs, tooltips, select, radio |
-| Plotly | 6.7 | Gráficos interativos (linha, rosca, barra, superfície 3D, shapes animadas) |
+| Plotly | 6.7 | Gráficos interativos (linha, rosca, barra, comparativo) + cena visual da simulação ao vivo (shapes posicionadas com trigonometria) |
 | NumPy | 2.4 | Arrays, universos de discurso, cálculos matriciais |
 | scikit-fuzzy | 0.5 | Motor de inferência fuzzy Mamdani |
 | SciPy | 1.17 | Dependência interna do scikit-fuzzy |
